@@ -252,6 +252,20 @@ tbody tr.total-row-t td{background:var(--bg3);font-weight:600;border-top:1px sol
 .btn-resumo-copy{background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);padding:10px 20px;font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s}
 .btn-resumo-copy:hover{background:var(--bg4);color:var(--text)}
 .btn-resumo-copy.copied{background:rgba(34,201,122,0.15);border-color:var(--green);color:var(--green)}
+
+.source-opt{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;cursor:pointer;font-size:13px;color:var(--text2);transition:background .15s;user-select:none}
+.source-opt:hover{background:var(--bg3);color:var(--text)}
+.source-opt.active{color:var(--text)}
+.source-opt-check{width:14px;height:14px;border:1.5px solid var(--border2);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s}
+.source-opt.active .source-opt-check{background:var(--accent);border-color:var(--accent);color:#fff}
+
+#name-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;align-items:center;justify-content:center}
+.name-modal{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius2);padding:2rem;width:100%;max-width:440px;position:relative}
+.name-modal h3{font-size:17px;font-weight:700;margin-bottom:6px}
+.name-modal p{font-size:13px;color:var(--text2);margin-bottom:1.25rem}
+.name-modal-row{display:flex;gap:10px;align-items:center}
+.name-modal-input{flex:1;background:var(--bg3);border:1.5px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-size:15px;outline:none;transition:border-color .2s}
+.name-modal-input:focus{border-color:var(--accent)}
 </style>
 
 </head>
@@ -284,7 +298,10 @@ tbody tr.total-row-t td{background:var(--bg3);font-weight:600;border-top:1px sol
   <div class="saved-header">
     <button class="btn-ghost" onclick="showHome()">← Voltar</button>
     <h2>Análises salvas</h2>
-    <button class="btn-ghost" onclick="showUpload()" style="border-color:rgba(124,110,247,0.4);color:var(--accent2)">+ Nova análise</button>
+    <div style="display:flex;gap:8px;margin-left:auto">
+      <button class="btn-ghost" onclick="importAnalysis()" title="Importar análise de arquivo .json" style="color:var(--blue);border-color:rgba(74,158,255,0.35)">⬆ Importar</button>
+      <button class="btn-ghost" onclick="showUpload()" style="border-color:rgba(124,110,247,0.4);color:var(--accent2)">+ Nova análise</button>
+    </div>
   </div>
   <div class="saved-list" id="saved-list-container"></div>
 </div>
@@ -403,9 +420,19 @@ tbody tr.total-row-t td{background:var(--bg3);font-weight:600;border-top:1px sol
     <span class="topbar-logo">Debriefing</span>
     <span class="topbar-period" id="topbar-period"></span>
     <div class="topbar-filters">
-      <div class="topbar-filter-group" style="align-items:flex-start">
-        <label style="padding-top:5px;flex-shrink:0">Source</label>
-        <div id="source-chips" style="display:flex;flex-wrap:wrap;gap:5px;max-width:360px"></div>
+      <div class="topbar-filter-group" style="position:relative">
+        <label>Source</label>
+        <button id="source-dropdown-btn" onclick="toggleSourceDropdown()" style="background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:5px 12px;color:var(--text);font-size:12px;cursor:pointer;display:flex;align-items:center;gap:6px;min-width:120px;white-space:nowrap">
+          <span id="source-btn-label">Todos</span>
+          <span style="margin-left:auto;color:var(--text3)">▾</span>
+        </button>
+        <div id="source-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);z-index:150;min-width:180px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,0.4)">
+          <div id="source-dropdown-list"></div>
+          <div style="border-top:1px solid var(--border);margin-top:6px;padding-top:6px;display:flex;gap:6px">
+            <button onclick="selectAllSources()" style="flex:1;padding:5px;border-radius:6px;font-size:11px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);cursor:pointer">Todos</button>
+            <button onclick="clearAllSources()" style="flex:1;padding:5px;border-radius:6px;font-size:11px;background:var(--bg3);border:1px solid var(--border2);color:var(--text2);cursor:pointer">Limpar</button>
+          </div>
+        </div>
       </div>
       <div class="topbar-filter-group">
         <label>De</label>
@@ -441,6 +468,7 @@ tbody tr.total-row-t td{background:var(--bg3);font-weight:600;border-top:1px sol
       </div>
     </div>
     <div class="topbar-right">
+      <button onclick="exportAnalysis()" style="background:rgba(74,158,255,0.1);border:1px solid rgba(74,158,255,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--blue);cursor:pointer;white-space:nowrap" title="Exportar análise como JSON">⬇ Exportar</button>
       <button onclick="openResumo()" style="background:rgba(34,201,122,0.12);border:1px solid rgba(34,201,122,0.3);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;color:var(--green);cursor:pointer;white-space:nowrap" title="Gerar resumo para WhatsApp">📋 Resumo WPP</button>
       <button class="btn-back" onclick="goHome()">← Início</button>
     </div>
@@ -504,7 +532,7 @@ function renderSavedList(){
     div.innerHTML =
       '<div class="saved-item-icon">📈</div>' +
       '<div class="saved-item-info" style="cursor:pointer" onclick="event.stopPropagation();loadAnalysisObj('+idx+')">' +
-        '<div class="saved-item-title">'+(a.frontProduct||'Análise'+(idx+1))+'</div>' +
+        '<div class="saved-item-title">'+(a.name||a.frontProduct||'Análise '+(idx+1))+'</div>' +
         '<div class="saved-item-meta">'+(a.period||'')+(a.cpaThreshold?' · Meta CPA: R$'+a.cpaThreshold:'')+(a.survey?' · '+a.survey.total+' respostas':'')+(a._builtin?' · <span style="color:var(--text3);font-size:11px">Built-in</span>':'')+'</div>' +
         '<div class="saved-item-stats">' +
           (t.inv?'<span class="saved-stat">Investimento: <strong>R$'+fmtBRL(t.inv)+'</strong></span>':'') +
@@ -513,6 +541,7 @@ function renderSavedList(){
         '</div>' +
       '</div>' +
       '<div class="saved-item-actions">' +
+        '<button class="action-btn" onclick="exportFromList('+idx+',event)" style="color:var(--blue)">⬇ Exportar</button>' +
         '<button class="action-btn update" onclick="startUpdate('+idx+',event)">Atualizar</button>' +
         (!a._builtin ? '<button class="action-btn danger" onclick="deleteAnalysis('+idx+',event)">Excluir</button>' : '') +
       '</div>' +
@@ -612,6 +641,11 @@ function runUpdate(){
 }
 
 function finishUpdate(updParsed){
+  _isUpdating = true; // skip name modal, keep existing name
+  var existingName = null;
+  var list = loadAllAnalyses();
+  if(_updatingIdx!==null&&list[_updatingIdx]) existingName = list[_updatingIdx].name||list[_updatingIdx].frontProduct;
+  _existingName = existingName;
   // Re-use existing product roles from the analysis being updated
   var list=loadAllAnalyses();
   var existing=list[_updatingIdx]||{};
@@ -736,6 +770,101 @@ function removeSegRule(i){
 }
 
 
+
+/* ══════════════════════════════════════════
+   AUTO-SAVE + EXPORT / IMPORT
+══════════════════════════════════════════ */
+function autoSaveAnalysis(d){
+  try{
+    var stored=JSON.parse(localStorage.getItem('debriefing_analyses')||'[]');
+    // Check if this period+product already exists — update instead of duplicate
+    var key=(d.name||d.frontProduct||'')+'|'+(d.period||'');
+    var idx=stored.findIndex(function(a){return ((a.frontProduct||'')+'|'+(a.period||''))===key});
+    if(idx>=0){stored[idx]=d;}else{stored.push(d);}
+    localStorage.setItem('debriefing_analyses',JSON.stringify(stored));
+    showSaveToast('✓ Análise salva automaticamente');
+  }catch(e){
+    if(e.name==='QuotaExceededError'||e.name==='NS_ERROR_DOM_QUOTA_REACHED'){
+      showSaveToast('⚠ Armazenamento cheio — exporte a análise como JSON para backup','warn');
+    }
+  }
+}
+
+function showSaveToast(msg, type){
+  var t=document.getElementById('save-toast');
+  if(!t)return;
+  t.textContent=msg;
+  t.style.background=type==='warn'?'rgba(245,166,35,0.9)':'rgba(34,201,122,0.9)';
+  t.style.display='block';
+  clearTimeout(t._timer);
+  t._timer=setTimeout(function(){t.style.display='none';},3000);
+}
+
+function exportFromList(idx,e){
+  e.stopPropagation();
+  var list=loadAllAnalyses();
+  var d=list[idx];if(!d)return;
+  var prev=_currentData;_currentData=d;exportAnalysis();_currentData=prev;
+}
+function exportAnalysis(){
+  if(!_currentData){alert('Nenhuma análise aberta.');return;}
+  var json=JSON.stringify(_currentData,null,2);
+  var blob=new Blob([json],{type:'application/json'});
+  var url=URL.createObjectURL(blob);
+  var a=document.createElement('a');
+  a.href=url;
+  a.download='debriefing-'+(_currentData.frontProduct||'analise').replace(/\s+/g,'-').toLowerCase()+'-'+(_currentData.period||'').replace(/[^0-9]/g,'')+'.json';
+  document.body.appendChild(a);a.click();
+  document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+
+function importAnalysis(){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.json';
+  inp.onchange=function(e){
+    var f=e.target.files[0];if(!f)return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        var d=JSON.parse(ev.target.result);
+        if(!d.sales||!d.frontProduct){alert('Arquivo inválido — não parece ser um export desta ferramenta.');return;}
+        d._builtin=false;
+        var stored=JSON.parse(localStorage.getItem('debriefing_analyses')||'[]');
+        var key=(d.frontProduct||'')+'|'+(d.period||'');
+        var idx=stored.findIndex(function(a){return((a.frontProduct||'')+'|'+(a.period||''))===key});
+        if(idx>=0){if(!confirm('Já existe uma análise com o mesmo período e produto. Substituir?'))return;stored[idx]=d;}
+        else{stored.push(d);}
+        localStorage.setItem('debriefing_analyses',JSON.stringify(stored));
+        showSaved();
+        showSaveToast('✓ Análise importada com sucesso');
+      }catch(err){alert('Erro ao importar: '+err.message);}
+    };
+    reader.readAsText(f);
+  };
+  inp.click();
+}
+
+
+var _pendingData = null;
+var _isUpdating = false;
+var _existingName = null;
+var _pendingComputed = null;
+
+function confirmSaveName(){
+  var inp = document.getElementById('analysis-name-input');
+  var name = (inp&&inp.value.trim()) || (FRONT_PRODUCT+' ('+(_pendingData&&_pendingData.period||'')+')');
+  if(!name){alert('Digite um nome para a análise.');return;}
+  if(_pendingData){
+    _pendingData.name = name;
+    _currentData = _pendingData;
+    document.getElementById('name-modal-overlay').style.display='none';
+    initFilterUI(_currentData);
+    autoSaveAnalysis(_currentData);
+    rebuildPanels(_currentData, _pendingComputed);
+    _pendingData = null; _pendingComputed = null;
+    refreshSavedBadge();
+  }
+}
 function refreshSavedBadge(){
   var list=loadAllAnalyses();
   var el=document.getElementById('saved-badge');
@@ -752,42 +881,95 @@ function hide(id){document.getElementById(id).style.display='none'}
 
 /* GLOBAL FILTER */
 
-function toggleSourceChip(chip){
-  var src = chip.dataset.source;
-  if(src==='__all__'){
-    // Selecting "Todos" clears all individual selections
-    gFilter.sources=[];
-    document.querySelectorAll('.source-chip').forEach(function(ch){
-      ch.classList.toggle('active', ch.dataset.source==='__all__');
-    });
-  } else {
-    // Toggle this source
-    var idx=gFilter.sources.indexOf(src);
-    if(idx>=0){
-      gFilter.sources.splice(idx,1);
-      chip.classList.remove('active');
-    } else {
-      gFilter.sources.push(src);
-      chip.classList.add('active');
-    }
-    // Deactivate "Todos" chip when any specific source is selected
-    var allChip=document.querySelector('.source-chip.all-chip');
-    if(allChip) allChip.classList.toggle('active', gFilter.sources.length===0);
-  }
-  // Source chips apply immediately (no need to click Aplicar)
-  var active=(gFilter.sources&&gFilter.sources.length)||gFilter.dateFrom||gFilter.dateTo;
-  document.getElementById('filter-active-badge').style.display=active?'inline-flex':'none';
-  if(_currentData)rebuildPanels(_currentData);
+/* toggleSourceChip replaced by dropdown */
+
+/* SOURCE DROPDOWN */
+function toggleSourceDropdown(){
+  var dd=document.getElementById('source-dropdown');
+  if(!dd)return;
+  if(dd.style.display==='none'){dd.style.display='block';}
+  else{dd.style.display='none';}
 }
+
+function buildSourceDropdown(sources){
+  var list=document.getElementById('source-dropdown-list');
+  if(!list)return;
+  list.innerHTML='';
+  sources.forEach(function(s){
+    var div=document.createElement('div');
+    div.className='source-opt';
+    div.dataset.src=s;
+    div.innerHTML='<span class="source-opt-check"></span><span>'+esc(s)+'</span>';
+    div.onclick=function(e){
+      e.stopPropagation();
+      toggleSourceOption(s,div);
+    };
+    list.appendChild(div);
+  });
+}
+
+function toggleSourceOption(src, el){
+  var idx=gFilter.sources.indexOf(src);
+  if(idx>=0){gFilter.sources.splice(idx,1);el.classList.remove('active');}
+  else{gFilter.sources.push(src);el.classList.add('active');}
+  updateSourceBtnLabel();
+  var active=(gFilter.sources&&gFilter.sources.length)||gFilter.dateFrom||gFilter.dateTo;
+  var badge=document.getElementById('filter-active-badge');
+  if(badge) badge.style.display=active?'inline-flex':'none';
+  if(_currentData) rebuildPanels(_currentData);
+}
+
+function selectAllSources(){
+  gFilter.sources=[];
+  document.querySelectorAll('#source-dropdown-list .source-opt').forEach(function(el){el.classList.remove('active')});
+  updateSourceBtnLabel();
+  document.getElementById('source-dropdown').style.display='none';
+  if(_currentData) rebuildPanels(_currentData);
+}
+
+function clearAllSources(){
+  gFilter.sources=[];
+  document.querySelectorAll('#source-dropdown-list .source-opt').forEach(function(el){el.classList.remove('active')});
+  updateSourceBtnLabel();
+  document.getElementById('filter-active-badge').style.display='none';
+  if(_currentData) rebuildPanels(_currentData);
+}
+
+function updateSourceBtnLabel(){
+  var lbl=document.getElementById('source-btn-label');
+  if(!lbl)return;
+  if(!gFilter.sources||!gFilter.sources.length){lbl.textContent='Todos';}
+  else if(gFilter.sources.length===1){lbl.textContent=gFilter.sources[0];}
+  else{lbl.textContent=gFilter.sources.length+' sources';}
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click',function(e){
+  var dd=document.getElementById('source-dropdown');
+  var btn=document.getElementById('source-dropdown-btn');
+  if(dd&&btn&&!dd.contains(e.target)&&!btn.contains(e.target)){dd.style.display='none';}
+});
+
 function applyGlobalFilter(){
-  gFilter.source=document.getElementById('filter-source').value;
-  gFilter.dateFrom=document.getElementById('filter-date-from').value;
-  gFilter.dateTo=document.getElementById('filter-date-to').value;
-  var newCpa=parseFloat(document.getElementById('dash-cpa').value);
-  if(newCpa>0&&newCpa!==CPA_THRESHOLD){CPA_THRESHOLD=newCpa;_cpaRows=_allRows.filter(function(r){return r.cpa!==null&&r.cpa<=CPA_THRESHOLD});}
-  var active=gFilter.source||gFilter.dateFrom||gFilter.dateTo;
-  document.getElementById('filter-active-badge').style.display=active?'inline-flex':'none';
-  if(_currentData)rebuildPanels(_currentData);
+  // Sources are handled by chip clicks (toggleSourceChip) — do NOT read filter-source select
+  var dfEl=document.getElementById('filter-date-from');
+  var dtEl=document.getElementById('filter-date-to');
+  var cpaEl=document.getElementById('dash-cpa');
+  if(dfEl) gFilter.dateFrom=dfEl.value;
+  if(dtEl) gFilter.dateTo=dtEl.value;
+  var newCpa=cpaEl?parseFloat(cpaEl.value):CPA_THRESHOLD;
+  if(newCpa>0&&newCpa!==CPA_THRESHOLD){
+    CPA_THRESHOLD=newCpa;
+    _cpaRows=_allRows.filter(function(r){return r.cpa!==null&&r.cpa<=CPA_THRESHOLD});
+    // Update CPA tab label
+    document.querySelectorAll('.tab').forEach(function(t){
+      if(t.textContent&&t.textContent.indexOf('CPA')>=0)t.textContent='CPA ≤ R$'+CPA_THRESHOLD;
+    });
+  }
+  var active=(gFilter.sources&&gFilter.sources.length)||gFilter.dateFrom||gFilter.dateTo;
+  var badge=document.getElementById('filter-active-badge');
+  if(badge) badge.style.display=active?'inline-flex':'none';
+  if(_currentData) rebuildPanels(_currentData);
 }
 function clearGlobalFilters(){
   gFilter={source:'',dateFrom:'',dateTo:''};
@@ -980,7 +1162,7 @@ function rebuildPanels(d, computed){
   var period=d.period||'';
   document.getElementById('topbar-period').textContent=period;
   document.getElementById('dash-title').textContent='Debriefing — '+FRONT_PRODUCT;
-  var srcLabel=gFilter.sources&&gFilter.sources.length?(' · Source: '+gFilter.sources.join(', ')):'';document.getElementById('dash-sub').textContent=period+srcLabel;
+  var srcLabel=gFilter.sources&&gFilter.sources.length?(' · Source: '+gFilter.sources.join(', ')):'';var subEl=document.getElementById('dash-sub');if(subEl)subEl.textContent=period+srcLabel;
   var activeSegs=Object.keys(computed.segs);
   var tabsEl=document.getElementById('seg-tabs');var panelsEl=document.getElementById('seg-panels');
   tabsEl.innerHTML='';panelsEl.innerHTML='';
@@ -1882,6 +2064,23 @@ function dash(){return '<span style="color:var(--text3)">–</span>'}
         <button class="btn-resumo-copy" id="btn-copy-resumo" onclick="copiarResumo()">📋 Copiar para WhatsApp</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- SAVE TOAST -->
+<div id="save-toast" style="display:none;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;color:#fff;z-index:500;pointer-events:none;transition:opacity .3s"></div>
+
+<!-- NAME MODAL -->
+<div id="name-modal-overlay" onclick="if(event.target===this){}">
+  <div class="name-modal">
+    <h3>💾 Salvar análise</h3>
+    <p>Dê um nome para identificar esta análise na lista.</p>
+    <div class="name-modal-row">
+      <input class="name-modal-input" id="analysis-name-input" type="text" placeholder="Ex: Desafio — Mar/26" maxlength="60"
+        onkeydown="if(event.key==='Enter')confirmSaveName()">
+      <button class="btn-primary" onclick="confirmSaveName()" style="padding:10px 20px;white-space:nowrap">Salvar →</button>
+    </div>
+    <p style="font-size:11px;color:var(--text3);margin-top:10px">Você poderá atualizar essa análise com novas planilhas a qualquer momento.</p>
   </div>
 </div>
 </body>
