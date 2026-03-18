@@ -1,0 +1,6 @@
+.DS_Store
+Thumbs.db
+*.csv
+*.zip
+node_modules/
+.vercel/
