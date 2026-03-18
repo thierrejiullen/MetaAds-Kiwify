@@ -1342,7 +1342,8 @@ function normalizeRow(row, platform){
   if(utmCamp&&String(utmCamp).toUpperCase().indexOf('[VID/TESTE][CBO]')>=0&&seg==='Outros')seg='Página';
   // Filter: only approved/paid sales
   var status=String(getCol(row,platform,'status')||'').toLowerCase();
-  if(status&&status!=='paid'&&status!=='approved'&&status!=='concluida'&&status!=='aprovado'&&status!=='complete'&&status!=='completed')return null;
+  var validStatus=['paid','approved','concluida','aprovado','complete','completed','pago','active'];
+  if(status&&validStatus.indexOf(status)<0)return null;
   return{email:email,produto:produto,total:valor,anuncio:utmCont||'',source:normSource(utmSrc),seg:seg,data:dateStr,camp:utmCamp||''};
 }
 
@@ -1354,7 +1355,7 @@ var _adInvArrGlobal = [];
 var _segsInvGlobal = {};
 var _segsMediaGlobal = {};
 
-function showProductScreen(salesRows, adInvArr, segsInv){
+function showProductScreen(salesRows, adInvArr, segsInv, segsMedia){
   _parsedSalesRows = salesRows;
   _adInvArrGlobal = adInvArr;
   _segsInvGlobal = segsInv;
@@ -1488,20 +1489,37 @@ function runAnalysis(){
 
 function goToProductScreen(){
   var camp=parsed.campanhas||[];var ads=parsed.anuncios||[];var vendas=parsed.vendas||[];
-  // Detect platform from vendas headers
   var headers=vendas.length?Object.keys(vendas[0]):[];
   _platform=detectPlatform(headers);
-  // Build ad investment map
+  // Ad investment map
   var adInvMap={};
   ads.forEach(function(r){var n=String(r['Nome do anúncio']||'').replace(/\+/g,' ').trim();adInvMap[n]=(adInvMap[n]||0)+toFloat(r['Valor usado (BRL)'])});
   var adInvArr=Object.keys(adInvMap).map(function(k){return{name:k,inv:adInvMap[k]}});
-  // Camp seg investment
-  camp.forEach(function(r){r._seg=getSeg(r['Nome da campanha']);r._inv=toFloat(r['Valor usado (BRL)'])});
-  var segsInv={};
-  ['INLEAD','Página','INLEAD-2','Outros'].forEach(function(s){segsInv[s]=camp.filter(function(r){return r._seg===s}).reduce(function(a,r){return a+r._inv},0)});
-  // Normalize sales rows using platform map
+  // Camp metrics per segment
+  camp.forEach(function(r){
+    r._seg=getSeg(r['Nome da campanha']);
+    r._inv=toFloat(r['Valor usado (BRL)']);
+    r._imp=toFloat(r['Impressões']);
+    r._alc=toFloat(r['Alcance']);
+    r._clk=toFloat(r['Cliques no link']);
+    r._lpv=toFloat(r['Visualizações da página de destino']);
+    r._ici=toFloat(r['Finalizações de compra iniciadas']||r['Inicializações de finalização de compra']||0);
+  });
+  var segsInv={};var segsMedia={};
+  ['INLEAD','Página','INLEAD-2','Outros'].forEach(function(s){
+    var rows=camp.filter(function(r){return r._seg===s});
+    segsInv[s]=rows.reduce(function(a,r){return a+r._inv},0);
+    segsMedia[s]={
+      imp:rows.reduce(function(a,r){return a+r._imp},0),
+      alc:rows.reduce(function(a,r){return a+r._alc},0),
+      clk:rows.reduce(function(a,r){return a+r._clk},0),
+      lpv:rows.reduce(function(a,r){return a+r._lpv},0),
+      ici:rows.reduce(function(a,r){return a+r._ici},0),
+      purch:0
+    };
+  });
   var salesRows=vendas.map(function(r){return normalizeRow(r,_platform)}).filter(function(r){return r&&r.produto});
-  showProductScreen(salesRows,adInvArr,segsInv);
+  showProductScreen(salesRows,adInvArr,segsInv,segsMedia);
 }
 
 
